@@ -1,0 +1,68 @@
+import hudson.tasks.test.AbstractTestResultAction
+  
+node {
+	stage 'Checkout'
+		cleanWs()
+		checkout scm
+		notifyBitbucket('INPROGRESS')
+
+	stage 'Build'
+		bat "\"C:/Program Files/dotnet/dotnet.exe\" restore \"${workspace}/YourProject.sln\""
+		bat "\"C:/Program Files/dotnet/dotnet.exe\" build \"${workspace}/YourProject.sln\""
+
+	stage 'UnitTests'
+		bat returnStatus: true, script: "\"C:/Program Files/dotnet/dotnet.exe\" test \"${workspace}/YourProject.sln\" --logger \"trx;LogFileName=unit_tests.xml\" --no-build"
+		step([$class: 'MSTestPublisher', testResultsFile:"**/unit_tests.xml", failOnError: true, keepLongStdio: true])
+		def allTestPassed = allTestPass()
+		if(allTestPassed == false)
+		{
+			notifyBitbucket('FAILED')
+			assert false
+		}
+		else
+		{
+			notifyBitbucket('SUCCESS')
+		}
+}
+
+def allTestPass() {
+    def testStatus = ""
+	def allTestPass = 0
+    AbstractTestResultAction testResultAction = currentBuild.rawBuild.getAction(AbstractTestResultAction.class)
+    if (testResultAction != null) {
+        def total = testResultAction.totalCount
+        def failed = testResultAction.failCount
+        def skipped = testResultAction.skipCount
+        def passed = total - failed - skipped
+        testStatus = "Test Status:\n  Passed: ${passed}, Failed: ${failed} ${testResultAction.failureDiffString}, Skipped: ${skipped}"
+        if (failed == 0) {
+            currentBuild.result = 'SUCCESS'
+        }
+		allTestPass = (failed == 0)
+    }
+	else
+	{
+		testStatus = "Didn't find any tests..."
+		allTestPass = false
+	}
+	println testStatus
+    return allTestPass
+}
+
+def notifyBitbucket(String state) {
+	println "Notify Bitbucket With " + state + ", Commit = " + "${Commit}"
+    if('SUCCESS' == state || 'FAILED' == state) {
+        currentBuild.result = state         // Set result of currentBuild !Important!
+	}
+	
+	notifyBitbucket commitSha1: '${Commit}', 
+					credentialsId: 'Bitbucket_PG_Global_For_Notification_User_Pass', 
+					disableInprogressNotification: false, 
+					considerUnstableAsSuccess: false, 
+					ignoreUnverifiedSSLPeer: true, 
+					includeBuildNumberInKey: false, 
+					prependParentProjectKey: false, 
+					projectKey: '', 
+					stashServerBaseUrl: 'http://www.your_BitBucket_Server:7990'
+
+}
