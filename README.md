@@ -8,12 +8,22 @@ Currently this project contains several example of using the pipeline for dotnet
 
 ### Features In "Jenkinsfile_Build_On_Commit"
  - You should use this pipeline for every commit in a branch.
- - Clean uo your workstation + checkout your branch.
+ - Clean up your workstation + checkout your branch.
  - Notifying your bitbucket server that the build stated + complete.
  - Building you .NET core solution.
  - Running all your unittest.
  - Publishing the unittest result to Jenkins.
  - Failing the build if a unittest is broken.
+
+### Features In "Jenkinsfile_Build_On_Merge"
+ - You should use this pipeline for every pull request.
+ - Clean up your workstation + checkout your master brnach + merging your current branch.
+ - Notifying your bitbucket server that the build stated + complete.
+ - Building you .NET core solution.
+ - Running all your unittest.
+ - Publishing the unittest result to Jenkins.
+ - Failing the build if a unittest is broken.
+ - Sending email with the build status (in a defined template) to list of predefined people.
 
 
 Those pipline jenkinsfile will add this pipline template to your build:

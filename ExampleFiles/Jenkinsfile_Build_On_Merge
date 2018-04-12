@@ -1,0 +1,113 @@
+import hudson.tasks.test.AbstractTestResultAction
+  
+node {
+	try {
+		currentBuild.result = 'SUCCESS'
+		stage ('Checkout')
+		{
+			cleanWs()
+			checkout scm 
+			bat "\"C:/Program Files/Git/bin/git.exe\" merge origin/${Branch}"
+			notifyBitbucket('INPROGRESS')
+		}
+		stage ('Build')
+		{
+			bat "\"C:/Program Files/dotnet/dotnet.exe\" restore \"${workspace}/YourProject.sln\""
+			bat "\"C:/Program Files/dotnet/dotnet.exe\" build \"${workspace}/YourProject.sln\""
+		}
+		stage ('UnitTests')
+		{
+			bat returnStatus: true, script: "\"C:/Program Files/dotnet/dotnet.exe\" test \"${workspace}/YourProject.sln\" --logger \"trx;LogFileName=unit_tests.xml\" --no-build"
+			step([$class: 'MSTestPublisher', testResultsFile:"**/unit_tests.xml", failOnError: true, keepLongStdio: true])
+			def allTestPassed = allTestPass()
+			if(allTestPassed == false)
+			{
+				notifyBitbucket('FAILED')
+				assert false
+			}
+			else
+			{
+				notifyBitbucket('SUCCESS')
+			}
+		}
+		
+		def mailRecipients = "YourEmail1@company.com YourEmail2@company.com YourEmail3@company.com"
+		def jobName = currentBuild.fullDisplayName
+		def committer = emailextrecipients([[$class: 'CulpritsRecipientProvider'],[$class: 'DevelopersRecipientProvider'],[$class: 'RequesterRecipientProvider']])
+		def allchanges = changelist()
+		
+		stage('Send email') 
+        {
+			echo "committer = ${committer}"
+			echo "allchanges = ${allchanges}"
+            sendmail(mailRecipients, jobName,committer)
+        }
+	} catch (Exception err) {
+		stage('Finishing') 
+        {
+            currentBuild.result = 'Fail'
+            sendmail(mailRecipients, jobName,committer)
+        }
+	}
+}
+
+def sendmail(mailRecipients, jobName,committer){
+	emailext body: '''${JELLY_SCRIPT,template="Merge"}''',
+                mimeType: 'text/html',
+                subject: "Merge job create by ${committer} status - ${currentBuild.result}",
+                to: "${mailRecipients};${committer}",
+                replyTo: "${mailRecipients}",
+                recipientProviders: [[$class: 'CulpritsRecipientProvider']]
+}
+
+def allTestPass() {
+    def testStatus = ""
+	def allTestPass = 0
+    AbstractTestResultAction testResultAction = currentBuild.rawBuild.getAction(AbstractTestResultAction.class)
+    if (testResultAction != null) {
+        def total = testResultAction.totalCount
+        def failed = testResultAction.failCount
+        def skipped = testResultAction.skipCount
+        def passed = total - failed - skipped
+        testStatus = "Test Status:\n  Passed: ${passed}, Failed: ${failed} ${testResultAction.failureDiffString}, Skipped: ${skipped}"
+        if (failed == 0) {
+            currentBuild.result = 'SUCCESS'
+        }
+		allTestPass = (failed == 0)
+    }
+	else
+	{
+		testStatus = "Didn't find any tests..."
+		allTestPass = false
+	}
+	println testStatus
+    return allTestPass
+}
+
+def changelist() {
+    def changes = ""
+    currentBuild.changeSets.each { set ->
+        set.each { entry ->
+            changes += "${entry.commitId} by ${entry.author.fullName}\n"
+        }
+    }
+    return changes
+}
+
+def notifyBitbucket(String state) {
+	println "Notify Bitbucket With " + state + ", Commit = " + "${Commit}"
+    if('SUCCESS' == state || 'FAILED' == state) {
+        currentBuild.result = state         // Set result of currentBuild !Important!
+	}
+	
+	notifyBitbucket commitSha1: '${Commit}', 
+					credentialsId: 'Bitbucket_PG_Global_For_Notification_User_Pass', 
+					disableInprogressNotification: false, 
+					considerUnstableAsSuccess: false, 
+					ignoreUnverifiedSSLPeer: true, 
+					includeBuildNumberInKey: false, 
+					prependParentProjectKey: false, 
+					projectKey: '', 
+					stashServerBaseUrl: 'http://www.your_BitBucket_Server:7990'
+
+}
