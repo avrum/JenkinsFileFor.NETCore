@@ -2,16 +2,16 @@ import hudson.tasks.test.AbstractTestResultAction
   
 node {
 	try {
-		currentBuild.result = 'SUCCESS'
 		stage ('Checkout')
 		{
+			notifyBitbucket('INPROGRESS')
 			cleanWs()
 			checkout scm 
 			bat "\"C:/Program Files/Git/bin/git.exe\" merge origin/${Branch}"
-			notifyBitbucket('INPROGRESS')
 		}
 		stage ('Build')
 		{
+			bat "nuget restore \"${workspace}/YourProject.sln\""
 			bat "\"C:/Program Files/dotnet/dotnet.exe\" restore \"${workspace}/YourProject.sln\""
 			bat "\"C:/Program Files/dotnet/dotnet.exe\" build \"${workspace}/YourProject.sln\""
 		}
@@ -31,7 +31,6 @@ node {
 			}
 		}
 		
-		def mailRecipients = "YourEmail1@company.com YourEmail2@company.com YourEmail3@company.com"
 		def jobName = currentBuild.fullDisplayName
 		def committer = emailextrecipients([[$class: 'CulpritsRecipientProvider'],[$class: 'DevelopersRecipientProvider'],[$class: 'RequesterRecipientProvider']])
 		def allchanges = changelist()
@@ -40,19 +39,21 @@ node {
         {
 			echo "committer = ${committer}"
 			echo "allchanges = ${allchanges}"
-            sendmail(mailRecipients, jobName,committer)
+            sendmail(jobName,committer)
         }
 	} catch (Exception err) {
 		stage('Finishing') 
         {
+			notifyBitbucket('FAILED')
             currentBuild.result = 'Fail'
-            sendmail(mailRecipients, jobName,committer)
+            sendmail(jobName,committer)
         }
 	}
 }
 
-def sendmail(mailRecipients, jobName,committer){
-	emailext body: '''${JELLY_SCRIPT,template="Merge"}''',
+def sendmail(jobName,committer){
+	def mailRecipients = "YourEmail1@company.com YourEmail2@company.com YourEmail3@company.com"
+	emailext body: '''${JELLY_SCRIPT,template="PlaygroundMerge"}''',
                 mimeType: 'text/html',
                 subject: "Merge job create by ${committer} status - ${currentBuild.result}",
                 to: "${mailRecipients};${committer}",
