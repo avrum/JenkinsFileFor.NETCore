@@ -2,11 +2,12 @@ import hudson.tasks.test.AbstractTestResultAction
   
 node {
 	stage 'Checkout'
+		notifyBitbucket('INPROGRESS')
 		cleanWs()
 		checkout scm
-		notifyBitbucket('INPROGRESS')
 
 	stage 'Build'
+		bat "nuget restore \"${workspace}/YourProject.sln\""
 		bat "\"C:/Program Files/dotnet/dotnet.exe\" restore \"${workspace}/YourProject.sln\""
 		bat "\"C:/Program Files/dotnet/dotnet.exe\" build \"${workspace}/YourProject.sln\""
 
