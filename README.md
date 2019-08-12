@@ -32,7 +32,7 @@ Those pipline jenkinsfile will add this pipline template to your build:
 
 
 <br><br>
-**If you found this repository to be helpful, you can say "thank you" by clicking the "start button. Thanks :)**
+**If you found this repository to be helpful, you can say "thank you" by clicking the "Star" button. Thanks :)**
 [![Start Github|Solid](https://github.com/avrum/JenkinsFileFor.NETCore/blob/master/GithubClickStart.png)](https://github.com/avrum/JenkinsFileFor.NETCore)
 
 
