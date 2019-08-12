@@ -31,6 +31,10 @@ Those pipline jenkinsfile will add this pipline template to your build:
 [![Example Jenkins Pipeline|Solid](https://github.com/avrum/JenkinsFileFor.NETCore/blob/master/JenkinsPipeExample.PNG)](https://github.com/avrum/JenkinsFileFor.NETCore)
 
 
+<br><br>
+**If you found this repository to be helpful, you can say "thank you" by clicking the "start button. Thanks :)**
+[![Start Github|Solid](https://github.com/avrum/JenkinsFileFor.NETCore/blob/master/GithubClickStart.png)](https://github.com/avrum/JenkinsFileFor.NETCore)
+
 
 <br><br>
 **"Sharing Is Caring" Please Contact Me For Merge Requests**
